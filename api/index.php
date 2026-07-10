@@ -195,6 +195,13 @@ function handleLogin($input) {
     $_SESSION['role'] = $user['role'];
     $_SESSION['organization_id'] = $user['organization_id'];
 
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = password_hash($token, PASSWORD_DEFAULT);
+    Database::execute(
+        "INSERT INTO user_tokens (user_id, token_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL '24 hours')",
+        [$user['id'], $tokenHash]
+    );
+
     $org = $user['organization_id'] ? Database::fetchOne("SELECT id, acronym, name, domain FROM organizations WHERE id = ?", [$user['organization_id']]) : null;
 
     log_audit('LOGIN', 'users', $user['id'], ['username' => $username]);
@@ -205,6 +212,7 @@ function handleLogin($input) {
         'full_name' => $user['full_name'],
         'email' => $user['email'],
         'role' => $user['role'],
+        'token' => $token,
         'organization_id' => $user['organization_id'],
         'org_acronym' => $org['acronym'] ?? null,
         'org_name' => $org['name'] ?? null
@@ -422,6 +430,8 @@ function handleUpdateOrganization($id, $input) {
         [$name, $domain, $description, $id]
     );
 
+    bumpOrgSerial($id);
+
     log_audit('UPDATE', 'organizations', $id, ['name' => $name]);
     jsonSuccess(null, 'Organizacao atualizada');
 }
@@ -472,6 +482,7 @@ function handleUpdateVariables($input) {
     }
 
     log_audit('UPDATE', 'variables', null, ['organization_id' => $orgId, 'count' => count($variables)]);
+    bumpOrgSerial($orgId);
     jsonSuccess(null, 'Variaveis salvas com sucesso');
 }
 
@@ -738,6 +749,8 @@ function handleGenerateBundle($input) {
 
     $bundleId = (int)Database::lastInsertId();
 
+    bumpOrgSerial($orgId);
+
     log_audit('GENERATE', 'bundles', $bundleId, ['organization' => $org['acronym'], 'scripts' => count($scripts)]);
 
     jsonSuccess([
@@ -926,15 +939,31 @@ function handleStationCheckin($input) {
             "UPDATE stations SET ip_address = ?, mac_address = ?, os_name = ?, os_version = ?, configuration_serial = ?, last_checkin = CURRENT_TIMESTAMP WHERE id = ?",
             [$ipAddress, $macAddress, $osName, $osVersion, $configSerial, $existing['id']]
         );
+        $stationId = $existing['id'];
     } else {
         Database::execute(
             "INSERT INTO stations (hostname, ip_address, mac_address, os_name, os_version, organization_id, configuration_serial, last_checkin)
              VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
             [$hostname, $ipAddress, $macAddress, $osName, $osVersion, $organizationId, $configSerial]
         );
+        $stationId = Database::lastInsertId();
     }
 
-    jsonSuccess(['status' => 'ok'], 'Check-in registrado');
+    $org = Database::fetchOne("SELECT serial_config FROM organizations WHERE id = ?", [$organizationId]);
+    $latestBundle = Database::fetchOne(
+        "SELECT id FROM deploy_bundles WHERE organization_id = ? ORDER BY generated_at DESC LIMIT 1",
+        [$organizationId]
+    );
+    $orgSerial = (int)($org['serial_config'] ?? 0);
+
+    jsonSuccess([
+        'status' => 'ok',
+        'station_id' => $stationId,
+        'update_available' => ($orgSerial > $configSerial),
+        'latest_bundle_id' => $latestBundle['id'] ?? null,
+        'current_serial' => $configSerial,
+        'latest_serial' => $orgSerial
+    ], 'Check-in registrado');
 }
 
 // AUDIT

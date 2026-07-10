@@ -18,7 +18,43 @@ function sanitizeInput($str) {
 }
 
 function requireAuth() {
-    if (!isset($_SESSION['user_id'])) jsonError('Autenticacao necessaria', 401);
+    // 1. Verificar token Bearer
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+
+    if (preg_match('/Bearer\s+(.+)/', $authHeader, $matches)) {
+        $token = trim($matches[1]);
+        $tokens = Database::fetchAll(
+            "SELECT ut.user_id, ut.token_hash, u.role, u.organization_id, u.username
+             FROM user_tokens ut
+             JOIN users u ON u.id = ut.user_id
+             WHERE ut.expires_at > NOW()"
+        );
+
+        foreach ($tokens as $t) {
+            if (password_verify($token, $t['token_hash'])) {
+                $_SESSION['user_id'] = $t['user_id'];
+                $_SESSION['username'] = $t['username'];
+                $_SESSION['role'] = $t['role'];
+                $_SESSION['organization_id'] = $t['organization_id'];
+                return;
+            }
+        }
+    }
+
+    // 2. Fallback: sessão PHP
+    if (!empty($_SESSION['user_id'])) {
+        return;
+    }
+
+    jsonError('Autenticacao necessaria', 401);
+}
+
+function bumpOrgSerial($orgId) {
+    Database::execute(
+        "UPDATE organizations SET serial_config = serial_config + 1, updated_at = NOW() WHERE id = ?",
+        [$orgId]
+    );
 }
 
 function isAdminGap() {
