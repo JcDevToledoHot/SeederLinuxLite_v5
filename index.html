@@ -391,13 +391,13 @@ $ python3 agent.py --org <span class="text-amber-400">COMARA</span>
         // Load public stats and organizations
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const data = await API.get('stats');
+                const data = await API.get('dashboard');
 
                 if (data.success) {
-                    document.getElementById('stat-orgs').textContent = data.data.organizations;
-                    document.getElementById('stat-scripts').textContent = data.data.core_scripts;
-                    document.getElementById('stat-vars').textContent = data.data.variables;
-                    document.getElementById('stat-stations').textContent = data.data.stations;
+                    document.getElementById('stat-orgs').textContent = data.data.organizations || 0;
+                    document.getElementById('stat-scripts').textContent = data.data.scripts || 0;
+                    document.getElementById('stat-vars').textContent = data.data.variables || 0;
+                    document.getElementById('stat-stations').textContent = (data.data.stations_online || 0) + (data.data.stations_outdated || 0);
                 }
 
                 // Load organizations for public bundle download
@@ -406,7 +406,7 @@ $ python3 agent.py --org <span class="text-amber-400">COMARA</span>
                 if (orgsData.success && orgsData.data) {
                     const orgList = document.getElementById('org-list-public');
                     orgList.innerHTML = orgsData.data.map(org => `
-                        <a href="api/?action=bundle-download&id=${encodeURIComponent(org.acronym)}"
+                        <a href="api/?action=bundle-by-id&id=${encodeURIComponent(org.id)}"
                            class="p-4 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors flex items-center gap-3">
                             <span class="text-2xl font-bold text-blue-400">${org.acronym}</span>
                             <span class="text-slate-400 text-sm">${org.name}</span>

@@ -20,9 +20,10 @@ const API = {
         const res = await fetch(url, { credentials: 'same-origin' });
         return res.json();
     },
-    post: async (action, data) => {
+    post: async (action, data, params = {}) => {
         const url = new URL('/api/', location.origin);
         url.searchParams.set('action', action);
+        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -704,7 +705,6 @@ async function editScript(id) {
 
     document.getElementById('edit-script-id').value = res.data.id;
     document.getElementById('edit-script-name').value = res.data.name;
-    document.getElementById('edit-script-filename').value = res.data.filename;
     document.getElementById('edit-script-description').value = res.data.description || '';
     document.getElementById('edit-script-content').value = res.data.content || '';
 
@@ -726,6 +726,57 @@ async function deleteScript(id) {
     }
 }
 window.deleteScript = deleteScript;
+
+async function createScript(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('new-script-name').value.trim();
+    const filename = document.getElementById('new-script-filename').value.trim();
+    const description = document.getElementById('new-script-description').value;
+    const content = document.getElementById('new-script-content').value;
+
+    if (!name || !filename) {
+        Toast.error('Nome e arquivo obrigatorios');
+        return;
+    }
+
+    const res = await API.post('script', { name, filename, description, content, is_core: false });
+    if (res.success) {
+        Toast.success('Script criado com sucesso');
+        closeModal('modal-new-script');
+        document.getElementById('new-script-form')?.reset();
+        if (typeof loadAllScripts === 'function') loadAllScripts();
+        if (currentOrgId && typeof loadOrgScripts === 'function') loadOrgScripts(currentOrgId);
+    } else {
+        Toast.error(res.error || 'Erro ao criar script');
+    }
+}
+window.createScript = createScript;
+
+async function updateScript(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('edit-script-id').value;
+    const name = document.getElementById('edit-script-name').value.trim();
+    const description = document.getElementById('edit-script-description').value;
+    const content = document.getElementById('edit-script-content').value;
+
+    if (!name) {
+        Toast.error('Nome obrigatorio');
+        return;
+    }
+
+    const res = await API.put('script', id, { name, description, content });
+    if (res.success) {
+        Toast.success('Script atualizado com sucesso');
+        closeModal('modal-edit-script');
+        if (typeof loadAllScripts === 'function') loadAllScripts();
+        if (currentOrgId && typeof loadOrgScripts === 'function') loadOrgScripts(currentOrgId);
+    } else {
+        Toast.error(res.error || 'Erro ao atualizar script');
+    }
+}
+window.updateScript = updateScript;
 
 // ============ BUNDLE ============
 
@@ -853,7 +904,7 @@ async function deleteUser(id) {
 window.deleteUser = deleteUser;
 
 async function toggleUserStatus(id) {
-    const res = await API.post('user', { id: id });
+    const res = await API.post('user', {}, { id });
     if (res.success) {
         Toast.success(res.message || 'Status alterado');
         loadUsers();

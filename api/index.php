@@ -867,7 +867,7 @@ function handleGetStations($orgId) {
     $userOrgId = getUserOrgId();
     $isAdmin = isAdminGap();
 
-    $where = "s.is_active = TRUE";
+    $where = "1=1";
     $params = [];
 
     if ($userOrgId !== null && !$isAdmin) {
@@ -928,8 +928,8 @@ function handleStationCheckin($input) {
         );
     } else {
         Database::execute(
-            "INSERT INTO stations (hostname, ip_address, mac_address, os_name, os_version, organization_id, configuration_serial, last_checkin, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, TRUE)",
+            "INSERT INTO stations (hostname, ip_address, mac_address, os_name, os_version, organization_id, configuration_serial, last_checkin)
+             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
             [$hostname, $ipAddress, $macAddress, $osName, $osVersion, $organizationId, $configSerial]
         );
     }
