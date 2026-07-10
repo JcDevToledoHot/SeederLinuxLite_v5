@@ -55,16 +55,23 @@ const API = {
         return this.request(action, 'GET', null, params);
     },
 
-    async post(action, data) {
-        return this.request(action, 'POST', data);
+    async post(action, data, params = {}) {
+        return this.request(action, 'POST', data, params);
     },
 
-    async put(action, id, data) {
-        return this.request(action, 'PUT', data, { id });
+    async put(action, id, data, params = {}) {
+        const merged = { id, ...params };
+        return this.request(action, 'PUT', data, merged);
     },
 
     async delete(action, id) {
         return this.request(action, 'DELETE', null, { id });
+    },
+
+    async postMultipart(action, formData) {
+        const url = this.buildUrl(action);
+        const res = await fetch(url, { method: 'POST', body: formData, credentials: 'same-origin' });
+        return res.json();
     }
 };
 

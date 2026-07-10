@@ -409,6 +409,7 @@ function handleCreateOrganization($input) {
     Database::commit();
 
     log_audit('CREATE', 'organizations', $newOrgId, ['name' => $name, 'acronym' => $acronym]);
+    log_event("Organizacao criada: $acronym (id=$newOrgId)", 'INFO');
 
     jsonSuccess(
         Database::fetchOne("SELECT id, name, acronym, domain, description FROM organizations WHERE id = ?", [$newOrgId]),
@@ -664,6 +665,7 @@ function handleUploadScript() {
 
     $scriptId = (int)Database::lastInsertId();
     log_audit('UPLOAD', 'scripts', $scriptId, ['name' => $name, 'filename' => $filename]);
+    log_event("Script criado: $filename (id=$scriptId)", 'INFO');
     jsonSuccess(['id' => $scriptId, 'filename' => $filename], 'Script enviado');
 }
 
@@ -752,6 +754,7 @@ function handleGenerateBundle($input) {
     bumpOrgSerial($orgId);
 
     log_audit('GENERATE', 'bundles', $bundleId, ['organization' => $org['acronym'], 'scripts' => count($scripts)]);
+    log_event("Bundle gerado: {$org['acronym']} (id=$bundleId, scripts=" . count($scripts) . ")", 'INFO');
 
     jsonSuccess([
         'bundle_id' => $bundleId,
@@ -921,26 +924,28 @@ function handleStationCheckin($input) {
     $macAddress = sanitizeInput($input['mac_address'] ?? '');
     $osName = sanitizeInput($input['os_name'] ?? '');
     $osVersion = sanitizeInput($input['os_version'] ?? '');
-    $organizationId = (int)($input['organization_id'] ?? 0);
     $configSerial = (int)($input['configuration_serial'] ?? 0);
 
-    if (empty($hostname) || empty($organizationId)) {
-        jsonError('Hostname e organization_id obrigatorios');
+    if (empty($hostname)) {
+        jsonError('Hostname obrigatorio');
     }
 
-    // Check if station exists
+    // Check if station exists by hostname
     $existing = Database::fetchOne(
-        "SELECT id FROM stations WHERE hostname = ? AND organization_id = ?",
-        [$hostname, $organizationId]
+        "SELECT id, organization_id FROM stations WHERE hostname = ?",
+        [$hostname]
     );
 
     if ($existing) {
+        $organizationId = (int)$existing['organization_id'];
         Database::execute(
             "UPDATE stations SET ip_address = ?, mac_address = ?, os_name = ?, os_version = ?, configuration_serial = ?, last_checkin = CURRENT_TIMESTAMP WHERE id = ?",
             [$ipAddress, $macAddress, $osName, $osVersion, $configSerial, $existing['id']]
         );
         $stationId = $existing['id'];
     } else {
+        $organizationId = (int)($input['organization_id'] ?? 1);
+        if ($organizationId < 1) $organizationId = 1;
         Database::execute(
             "INSERT INTO stations (hostname, ip_address, mac_address, os_name, os_version, organization_id, configuration_serial, last_checkin)
              VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",

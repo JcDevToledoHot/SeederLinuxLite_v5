@@ -158,6 +158,7 @@
                                 <div class="flex items-center gap-2">
                                     <input type="text" id="var-search" placeholder="Buscar..." class="form-input" style="width: 200px;">
                                     <button id="btn-save-vars" class="btn btn-success btn-sm">Salvar</button>
+                                    <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-variable')">+ Variavel</button>
                                 </div>
                             </div>
                             <div class="card-body" id="vars-list"></div>
@@ -514,9 +515,69 @@
         </div>
     </div>
 
+    <!-- Add Variable Modal -->
+    <div id="modal-add-variable" class="modal hidden">
+        <div class="modal-backdrop" onclick="closeModal('modal-add-variable')"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Nova Variavel</h3>
+                <button class="modal-close" onclick="closeModal('modal-add-variable')">&times;</button>
+            </div>
+            <form id="add-variable-form" onsubmit="addVariable(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Nome <span class="text-red-400">*</span></label>
+                        <input type="text" id="new-var-name" class="form-input" required placeholder="MINHA_VARIAVEL">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select id="new-var-type" class="form-input">
+                            <option value="string">string</option>
+                            <option value="integer">integer</option>
+                            <option value="boolean">boolean</option>
+                            <option value="array">array</option>
+                            <option value="json">json</option>
+                            <option value="url">url</option>
+                            <option value="ip">ip</option>
+                            <option value="cidr">cidr</option>
+                            <option value="password">password</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor</label>
+                        <input type="text" id="new-var-value" class="form-input" placeholder="Valor padrao">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descricao</label>
+                        <textarea id="new-var-description" class="form-input" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoria</label>
+                        <select id="new-var-category" class="form-input">
+                            <option value="dominio">Dominio e Autenticacao</option>
+                            <option value="rede">Rede</option>
+                            <option value="identidade">Identidade Visual</option>
+                            <option value="general">Geral</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox" id="new-var-required"> Obrigatoria
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-variable')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
+    <script src="assets/js/app.js"></script>
     <script src="assets/js/admin.js"></script>
     <script>
         // Show network config when domain is filled

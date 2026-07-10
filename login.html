@@ -44,21 +44,8 @@
         </p>
     </div>
 
+    <script src="assets/js/app.js"></script>
     <script>
-        const API = {
-            post: async (action, data) => {
-                const url = new URL('/api/', location.origin);
-                url.searchParams.set('action', action);
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                    credentials: 'same-origin'
-                });
-                return res.json();
-            }
-        };
-
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 

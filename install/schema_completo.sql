@@ -227,6 +227,21 @@ CREATE INDEX IF NOT EXISTS idx_stations_status ON stations(status);
 CREATE INDEX IF NOT EXISTS idx_stations_checkin ON stations(last_checkin DESC);
 
 -- ============================================================================
+-- Table: user_tokens
+-- Purpose: Store hashed bearer tokens issued at login
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_tokens_user ON user_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_tokens_expires ON user_tokens(expires_at);
+
+-- ============================================================================
 -- Create views for easier querying
 -- ============================================================================
 
@@ -337,7 +352,11 @@ INSERT INTO variable_definitions (name, placeholder, description, default_value,
 -- Repositórios
 ('REPOSITORY_MODE', '{{REPOSITORY_MODE}}', 'Modo de repositório: PUBLIC, MIRROR, HYBRID, CUSTOM', 'MIRROR', 'repositorios', TRUE, 100),
 ('REPOSITORY_URL', '{{REPOSITORY_URL}}', 'URL do repositório espelho', 'https://softwarelivre.comara.intraer', 'repositorios', FALSE, 101),
-('REPOSITORY_FALLBACK', '{{REPOSITORY_FALLBACK}}', 'URL de repositório fallback (internet)', 'http://deb.debian.org/debian', 'repositorios', FALSE, 102)
+('REPOSITORY_FALLBACK', '{{REPOSITORY_FALLBACK}}', 'URL de repositório fallback (internet)', 'http://deb.debian.org/debian', 'repositorios', FALSE, 102),
+
+-- Missing variables referenced in code
+('OM_NAME', '{{OM_NAME}}', 'Nome completo da Organização Militar', '', 'branding', FALSE, 103),
+('DC_SECUNDARIO_IP', '{{DC_SECUNDARIO_IP}}', 'IP do Controlador de Domínio secundário', '', 'dominio', FALSE, 104)
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
@@ -708,6 +727,12 @@ INSERT INTO system_settings (key, value, value_type, description, is_public) VAL
 ('enable_activity_log', 'true', 'boolean', 'Habilitar log de atividades', FALSE),
 ('default_timezone', 'America/Sao_Paulo', 'string', 'Fuso horário padrão', TRUE)
 ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================================
+-- Grants for user_tokens table
+-- ============================================================================
+GRANT ALL PRIVILEGES ON TABLE user_tokens TO seeder;
+GRANT USAGE, SELECT ON SEQUENCE user_tokens_id_seq TO seeder;
 
 -- ============================================================================
 -- End of Schema

@@ -1,6 +1,7 @@
 /**
  * SeederLinux Lite - Admin JavaScript
  * Todos os handlers e funcoes da interface administrativa
+ * API object is defined in app.js (canonical) and loaded before admin.js
  */
 
 let currentUser = null;
@@ -10,54 +11,6 @@ let allVariables = [];
 let activeCategory = 'Todas';
 let uploadedImages = { wallpapers: [], logos: [] };
 let scriptTab = 'Core';
-
-// API Helper
-const API = {
-    get: async (action, params = {}) => {
-        const url = new URL('/api/', location.origin);
-        url.searchParams.set('action', action);
-        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-        const res = await fetch(url, { credentials: 'same-origin' });
-        return res.json();
-    },
-    post: async (action, data, params = {}) => {
-        const url = new URL('/api/', location.origin);
-        url.searchParams.set('action', action);
-        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            credentials: 'same-origin'
-        });
-        return res.json();
-    },
-    put: async (action, id, data) => {
-        const url = new URL('/api/', location.origin);
-        url.searchParams.set('action', action);
-        url.searchParams.set('id', id);
-        const res = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            credentials: 'same-origin'
-        });
-        return res.json();
-    },
-    delete: async (action, id) => {
-        const url = new URL('/api/', location.origin);
-        url.searchParams.set('action', action);
-        url.searchParams.set('id', id);
-        const res = await fetch(url, { method: 'DELETE', credentials: 'same-origin' });
-        return res.json();
-    },
-    postMultipart: async (action, formData) => {
-        const url = new URL('/api/', location.origin);
-        url.searchParams.set('action', action);
-        const res = await fetch(url, { method: 'POST', body: formData, credentials: 'same-origin' });
-        return res.json();
-    }
-};
 
 // Utils
 const Utils = {
@@ -110,9 +63,7 @@ const variableOptions = {
     'PROXY_PORTA': ['80', '8080', '3128', '8888'],
     'OFFLINE_AUTH_ENABLED': 'boolean',
     'INVENTORY_ENABLED': 'boolean',
-    'CERTIFICATE_AUTO_INSTALL': 'boolean',
-    'AUTO_UPDATE': 'boolean',
-    'DEBUG_MODE': 'boolean'
+    'CERTIFICATE_AUTO_INSTALL': 'boolean'
 };
 
 // Role labels
@@ -526,6 +477,42 @@ async function saveVariables() {
     }
 }
 window.saveVariables = saveVariables;
+
+async function addVariable(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('new-var-name').value.trim();
+    const type = document.getElementById('new-var-type').value;
+    const value = document.getElementById('new-var-value').value;
+    const description = document.getElementById('new-var-description').value;
+    const category = document.getElementById('new-var-category').value;
+    const required = document.getElementById('new-var-required').checked;
+
+    if (!name) {
+        Toast.error('Nome da variavel obrigatorio');
+        return;
+    }
+
+    const res = await API.post('variable-add', {
+        organization_id: currentOrgId,
+        name,
+        value,
+        type,
+        description,
+        category,
+        required
+    });
+
+    if (res.success) {
+        Toast.success('Variavel adicionada com sucesso');
+        closeModal('modal-add-variable');
+        document.getElementById('add-variable-form')?.reset();
+        loadVariables(currentOrgId);
+    } else {
+        Toast.error(res.error || 'Erro ao adicionar variavel');
+    }
+}
+window.addVariable = addVariable;
 
 function selectGalleryImage(url, varId, el) {
     const input = document.querySelector(`input[data-var-id="${varId}"], textarea[data-var-id="${varId}"]`);
