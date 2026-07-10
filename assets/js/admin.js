@@ -125,6 +125,9 @@ const roleLabels = {
 // ============ INITIALIZATION ============
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Safety: ensure all modals start hidden
+    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+
     try {
         const session = await API.get('session');
         if (!session.success) {
@@ -1136,8 +1139,5 @@ function setupEventListeners() {
         }
     });
 
-    // Forms
-    document.getElementById('new-org-form')?.addEventListener('submit', createOrganization);
-    document.getElementById('edit-org-form')?.addEventListener('submit', updateOrganization);
-    document.getElementById('user-form')?.addEventListener('submit', saveUser);
+    // Forms with inline onsubmit in HTML — no addEventListener needed (avoids double-binding)
 }
